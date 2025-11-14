@@ -1,56 +1,135 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
-// Desafio Tetris Stack
-// Tema 3 - Integração de Fila e Pilha
-// Este código inicial serve como base para o desenvolvimento do sistema de controle de peças.
-// Use as instruções de cada nível para desenvolver o desafio.
+#define MAX 5
 
-int main() {
+/* struct territorio */
+typedef struct {
+    char nome[30];
+    char cor[20];
+    int tropas;
+} Territorio;
 
-    // 🧩 Nível Novato: Fila de Peças Futuras
-    //
-    // - Crie uma struct Peca com os campos: tipo (char) e id (int).
-    // - Implemente uma fila circular com capacidade para 5 peças.
-    // - Crie funções como inicializarFila(), enqueue(), dequeue(), filaCheia(), filaVazia().
-    // - Cada peça deve ser gerada automaticamente com um tipo aleatório e id sequencial.
-    // - Exiba a fila após cada ação com uma função mostrarFila().
-    // - Use um menu com opções como:
-    //      1 - Jogar peça (remover da frente)
-    //      0 - Sair
-    // - A cada remoção, insira uma nova peça ao final da fila.
+/* remove \n */
+void tiraEnter(char *s) {
+    s[strcspn(s, "\n")] = 0;
+}
 
+/* imprime mapa */
+void mostrar(const Territorio *t) {
+    printf("\n=== MAPA ===\n");
+    for (int i = 0; i < MAX; i++) {
+        printf("%d) %s | %s | Tropas: %d\n",
+               i+1, t[i].nome, t[i].cor, t[i].tropas);
+    }
+}
 
+/* ataque */
+void atacar(Territorio *a, Territorio *d) {
+    int da = rand() % 6 + 1;
+    int dd = rand() % 6 + 1;
 
-    // 🧠 Nível Aventureiro: Adição da Pilha de Reserva
-    //
-    // - Implemente uma pilha linear com capacidade para 3 peças.
-    // - Crie funções como inicializarPilha(), push(), pop(), pilhaCheia(), pilhaVazia().
-    // - Permita enviar uma peça da fila para a pilha (reserva).
-    // - Crie um menu com opção:
-    //      2 - Enviar peça da fila para a reserva (pilha)
-    //      3 - Usar peça da reserva (remover do topo da pilha)
-    // - Exiba a pilha junto com a fila após cada ação com mostrarPilha().
-    // - Mantenha a fila sempre com 5 peças (repondo com gerarPeca()).
+    printf("\nAtaque %s(%d) x %s(%d)\n",
+           a->nome, da, d->nome, dd);
 
+    if (da >= dd) {       /* atacante vence empate */
+        d->tropas--;
+        printf("Defensor perdeu 1 tropa!\n");
+    } else {
+        printf("Defensor resistiu!\n");
+    }
 
-    // 🔄 Nível Mestre: Integração Estratégica entre Fila e Pilha
-    //
-    // - Implemente interações avançadas entre as estruturas:
-    //      4 - Trocar a peça da frente da fila com o topo da pilha
-    //      5 - Trocar os 3 primeiros da fila com as 3 peças da pilha
-    // - Para a opção 4:
-    //      Verifique se a fila não está vazia e a pilha tem ao menos 1 peça.
-    //      Troque os elementos diretamente nos arrays.
-    // - Para a opção 5:
-    //      Verifique se a pilha tem exatamente 3 peças e a fila ao menos 3.
-    //      Use a lógica de índice circular para acessar os primeiros da fila.
-    // - Sempre valide as condições antes da troca e informe mensagens claras ao usuário.
-    // - Use funções auxiliares, se quiser, para modularizar a lógica de troca.
-    // - O menu deve ficar assim:
-    //      4 - Trocar peça da frente com topo da pilha
-    //      5 - Trocar 3 primeiros da fila com os 3 da pilha
+    if (d->tropas <= 0) {
+        d->tropas = 0;
+        printf("%s conquistou o territorio!\n", a->nome);
+    }
+}
 
+/* verifica missao */
+int missao_ok(int tipo, const Territorio *t) {
+    if (tipo == 1) {
+        /* destruir exercito verde */
+        for (int i = 0; i < MAX; i++)
+            if (strcmp(t[i].cor, "Verde") == 0 &&
+                t[i].tropas > 0)
+                return 0;
+        return 1;
+    }
+
+    if (tipo == 2) {
+        /* conquistar 3 */
+        int conta = 0;
+        for (int i = 0; i < MAX; i++)
+            if (t[i].tropas == 0) conta++;
+        return (conta >= 3);
+    }
 
     return 0;
 }
 
+int main() {
+    srand(time(NULL));
+
+    /* NIVEL NOVATO + AVENTUREIRO:
+       antes era vetor estático, agora calloc */
+    Territorio *t = calloc(MAX, sizeof(Territorio));
+
+    printf("=== CADASTRO INICIAL ===\n");
+    for (int i = 0; i < MAX; i++) {
+        printf("\nTerritorio %d:\n", i+1);
+
+        printf("Nome: ");
+        fgets(t[i].nome, 30, stdin);
+        tiraEnter(t[i].nome);
+
+        printf("Cor: ");
+        fgets(t[i].cor, 20, stdin);
+        tiraEnter(t[i].cor);
+
+        printf("Tropas: ");
+        scanf("%d", &t[i].tropas);
+        getchar();
+    }
+
+    /* NIVEL MESTRE: missão aleatória */
+    int missao = rand() % 2 + 1;  /* 1 ou 2 */
+
+    /* menu */
+    while (1) {
+        int op;
+        mostrar(t);
+
+        printf("\nMISSAO: ");
+        if (missao == 1) printf("Destruir o exercito VERDE.\n");
+        else             printf("Conquistar 3 territorios.\n");
+
+        printf("\n1 - Atacar\n2 - Verificar Missao\n0 - Sair\nOpcao: ");
+        scanf("%d", &op);
+
+        if (op == 0) break;
+
+        if (op == 1) {
+            int a, d;
+            printf("Atacante (1-5): ");
+            scanf("%d", &a);
+            printf("Defensor (1-5): ");
+            scanf("%d", &d);
+
+            a--; d--;
+            if (a >= 0 && a < MAX && d >= 0 && d < MAX)
+                atacar(&t[a], &t[d]);
+        }
+
+        if (op == 2) {
+            if (missao_ok(missao, t))
+                printf("\n*** MISSAO CUMPRIDA! ***\n");
+            else
+                printf("\nAinda nao concluiu.\n");
+        }
+    }
+
+    free(t);
+    return 0;
+}
